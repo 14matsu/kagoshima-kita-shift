@@ -1,0 +1,6 @@
+# VSCodeで新しいファイル.gitignoreを作成し、以下の内容を記述
+.env
+__pycache__/
+*.pyc
+.DS_Store
+.streamlit/secrets.toml
