@@ -199,7 +199,8 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
         ('TOPPADDING', (0, 0), (-1, -1), 2),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
         ('TEXTCOLOR', (0, 1), (-1, -2), colors.HexColor("#373737")),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#e6f3ff"))  # シフト日数行の背景色
+        ('BACKGROUND', (0, -2), (-1, -2), colors.HexColor("#e6f3ff")),  # シフト日数行の背景色
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#e6f3ff"))  # 必要日数行の背景色
     ])
 
     for i, (_, row) in enumerate(data.iterrows(), start=1):
@@ -334,10 +335,21 @@ def generate_individual_pdf(data, employee, year, month, custom_holidays=None):
                 
         table_data.append(row_data)
 
+    # シフト日数の計算
+    shift_counts = calculate_shift_count(data)
     # シフト日数の表示行を追加
     table_data.append([''] * len(table_data[0]))  # 空行
-    count_row = ['シフト日数', '', Paragraph(f'<b>{shift_count}</b>', bold_style)] + [''] * (max_shifts - 1)
+    count_row = ['シフト日数', ''] + [Paragraph(f'<b>{shift_counts[emp]}</b>', bold_style) 
+                                for emp in data.columns if emp not in ['日付', '曜日']]
     table_data.append(count_row)
+
+    # 必要日数を取得して追加
+    from database import db
+    work_days = db.get_work_days(year, month)
+    if work_days is not None:
+        required_days_row = ['必要日数', '', Paragraph(f'<b>{work_days}</b>', bold_style)]
+        required_days_row.extend([''] * (len(table_data[0]) - 3))
+        table_data.append(required_days_row)
 
     table = Table(table_data, colWidths=col_widths)
     
@@ -352,7 +364,8 @@ def generate_individual_pdf(data, employee, year, month, custom_holidays=None):
         ('FONTSIZE', (0, 1), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#e6f3ff"))  # シフト日数行の背景色
+        ('BACKGROUND', (0, -2), (-1, -2), colors.HexColor("#e6f3ff")),  # シフト日数行の背景色
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#e6f3ff"))  # 必要日数行の背景色
     ])
 
     for i, row in enumerate(table_data[1:-2], start=1):  # 最後の2行（空行とシフト日数）を除外
