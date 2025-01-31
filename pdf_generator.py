@@ -188,10 +188,15 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
     # 必要日数行を追加（取得できた場合のみ）
     if work_days is not None:
         table_data.append([''] * len(table_data[0]))  # 空行
-        required_days_row = [f'{start_date.strftime("%Y年%m月%d日")}～{end_date.strftime("%Y年%m月%d日")}の必要日数', ''] + \
+        # 日付範囲のセルは2列分を結合するため、最初の2列に同じ文字列を入れる
+        required_days_text = f'{start_date.strftime("%Y年%m月%d日")}～{end_date.strftime("%Y年%m月%d日")}の必要日数'
+        required_days_row = [required_days_text, ''] + \
                           [Paragraph(f'<b>{work_days}</b>', bold_style)] + \
                           [''] * (len(data.columns) - 3)  # 残りの列を空白で埋める
         table_data.append(required_days_row)
+        
+        # セル結合用のスタイルを追加
+        table_style.add('SPAN', (0, -1), (1, -1))  # 最後の行の最初の2列を結合
 
     available_width = custom_page_size[0] - 10*mm
     date_width = 45*mm
@@ -350,27 +355,10 @@ def generate_individual_pdf(data, employee, year, month, custom_holidays=None):
                 
         table_data.append(row_data)
 
-    # シフト日数行を追加
+    # シフト日数の表示行を追加
     table_data.append([''] * len(table_data[0]))  # 空行
-    count_row = ['シフト日数', ''] + [Paragraph(f'<b>{shift_count[emp]}</b>', bold_style) 
-                                  for emp in data.columns if emp not in ['日付', '曜日']]
+    count_row = ['シフト日数', '', Paragraph(f'<b>{shift_count}</b>', bold_style)] + [''] * (max_shifts - 1)
     table_data.append(count_row)
-    
-    # 必要日数を取得
-    work_days = None
-    try:
-        from database import db
-        work_days = db.get_work_days(year, month)
-    except Exception as e:
-        print(f"必要日数の取得に失敗しました: {e}")
-    
-    # 必要日数行を追加（取得できた場合のみ）
-    if work_days is not None:
-        table_data.append([''] * len(table_data[0]))  # 空行
-        required_days_row = [f'{start_date.strftime("%Y年%m月%d日")}～{end_date.strftime("%Y年%m月%d日")}の必要日数', ''] + \
-                          [Paragraph(f'<b>{work_days}</b>', bold_style)] + \
-                          [''] * (len(data.columns) - 3)  # 残りの列を空白で埋める
-        table_data.append(required_days_row)
 
     table = Table(table_data, colWidths=col_widths)
     
