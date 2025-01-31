@@ -102,13 +102,13 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
     buffer = io.BytesIO()
     custom_page_size = (landscape(A4)[0] * 1.2, landscape(A4)[1] * 1.15)
     doc = SimpleDocTemplate(buffer, pagesize=custom_page_size, rightMargin=5*mm, leftMargin=5*mm, topMargin=8*mm, bottomMargin=8*mm)
-    elements = []
 
+    # 初期化とスタイル設定
+    elements = []
     pdfmetrics.registerFont(TTFont('NotoSansJP', 'NotoSansJP-VariableFont_wght.ttf'))
     pdfmetrics.registerFont(TTFont('NotoSansJP-Bold', 'NotoSansJP-Bold.ttf'))
 
     styles = getSampleStyleSheet()
-    
     title_style = ParagraphStyle(
         'Title',
         parent=styles['Heading1'],
@@ -116,7 +116,6 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
         fontSize=16,
         textColor=colors.HexColor("#373737")
     )
-
     bold_style = ParagraphStyle(
         'Bold',
         parent=styles['Normal'],
@@ -125,7 +124,6 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
         alignment=TA_CENTER,
         textColor=colors.HexColor("#373737")
     )
-
     header_style = ParagraphStyle(
         'Header',
         parent=styles['Normal'],
@@ -135,10 +133,12 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
         textColor=colors.white
     )
 
+    # 日付範囲の設定
     start_date = pd.Timestamp(year, month, 16)
     next_month = start_date + pd.DateOffset(months=1)
     end_date = next_month.replace(day=15)
 
+    # タイトルの追加
     title = Paragraph(f"{start_date.strftime('%Y年%m月%d日')}～{end_date.strftime('%Y年%m月%d日')} ヘルプ表", title_style)
     elements.append(title)
     elements.append(Spacer(1, 3*mm))
@@ -146,6 +146,7 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
     # シフト日数の計算
     shift_counts = calculate_shift_count(data)
 
+    # テーブルヘッダーの作成
     table_data = [
         [
             Paragraph('<font color="white"><b>日付</b></font>', header_style),
@@ -154,6 +155,7 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
              for emp in data.columns if emp not in ['日付', '曜日']]
     ]
 
+    # テーブルデータの作成
     for _, row in data.iterrows():
         table_row = [
             Paragraph(f'<b>{row["日付"]}</b>', bold_style),
@@ -171,12 +173,12 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
         
         table_data.append(table_row)
 
-# シフト日数行を追加
+    # シフト日数行を追加
     table_data.append([''] * len(table_data[0]))  # 空行
     count_row = ['シフト日数', ''] + [Paragraph(f'<b>{shift_counts[emp]}</b>', bold_style) 
                                   for emp in data.columns if emp not in ['日付', '曜日']]
     table_data.append(count_row)
-    
+
     # 必要日数を取得
     work_days = None
     try:
@@ -188,13 +190,13 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
     # 必要日数行を追加（取得できた場合のみ）
     if work_days is not None:
         table_data.append([''] * len(table_data[0]))  # 空行
-        # 日付範囲のセルは2列分を結合するため、最初の2列に同じ文字列を入れる
         required_days_text = f'{start_date.strftime("%Y年%m月%d日")}～{end_date.strftime("%Y年%m月%d日")}の必要日数'
         required_days_row = [required_days_text, ''] + \
                           [Paragraph(f'<b>{work_days}</b>', bold_style)] + \
                           [''] * (len(data.columns) - 3)  # 残りの列を空白で埋める
         table_data.append(required_days_row)
 
+    # テーブルの列幅を設定
     available_width = custom_page_size[0] - 10*mm
     date_width = 45*mm
     weekday_width = 25*mm
@@ -202,9 +204,10 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
     employee_width = remaining_width / (len(data.columns) - 2)
     col_widths = [date_width, weekday_width] + [employee_width] * (len(data.columns) - 2)
 
+    # テーブルとスタイルの作成
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
     
-    table_style = TableStyle([
+    style_commands = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -217,9 +220,17 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
         ('TOPPADDING', (0, 0), (-1, -1), 2),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
         ('TEXTCOLOR', (0, 1), (-1, -2), colors.HexColor("#373737")),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#e6f3ff"))  # シフト日数行の背景色
-    ])
+        ('BACKGROUND', (0, -3), (-1, -3), colors.HexColor("#e6f3ff")),  # シフト日数行の背景色
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#e6f3ff"))  # 必要日数行の背景色
+    ]
 
+    # 必要日数が存在する場合、セル結合のコマンドを追加
+    if work_days is not None:
+        style_commands.append(('SPAN', (0, -1), (1, -1)))  # 最後の行の最初の2列を結合
+
+    table_style = TableStyle(style_commands)
+
+    # 土日祝日の背景色を設定
     for i, (_, row) in enumerate(data.iterrows(), start=1):
         date = pd.to_datetime(row['日付'])
         if row['曜日'] == '日' or date in custom_holidays or jpholiday.is_holiday(date):
@@ -227,9 +238,11 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
         elif row['曜日'] == '土':
             table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor(SATURDAY_BG_COLOR))
 
+    # スタイルを適用してテーブルを要素に追加
     table.setStyle(table_style)
     elements.append(table)
 
+    # PDFの生成
     doc.build(elements)
     buffer.seek(0)
     return buffer
