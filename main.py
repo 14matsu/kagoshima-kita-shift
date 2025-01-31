@@ -267,6 +267,41 @@ def display_shift_table(selected_year, selected_month):
 def display_employee_management():
     st.header("スタッフ管理")
     
+    # CSSで行間を調整
+    st.markdown("""
+        <style>
+        /* コンテナ間の余白を調整 */
+        [data-testid="stVerticalBlock"] > [style*="flex"] {
+            gap: 0.5rem !important;
+        }
+        
+        /* dividerの余白を調整 */
+        .element-container div.stDivider {
+            margin-top: 0.5rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        /* ボタンの余白を調整 */
+        .stButton {
+            margin-top: 0px !important;
+            margin-bottom: 0px !important;
+        }
+        
+        /* トグルの余白を調整 */
+        .row-widget.stCheckbox {
+            margin-top: 0px !important;
+            margin-bottom: 0px !important;
+            line-height: 1 !important;
+        }
+        
+        /* スタッフ一覧の行の高さを調整 */
+        .staff-row {
+            margin: 0 !important;
+            padding: 3px 0 !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # 新しいスタッフの追加
     with st.expander("新しいスタッフを追加"):
         col1, col2 = st.columns([3, 1])
