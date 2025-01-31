@@ -194,9 +194,6 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
                           [Paragraph(f'<b>{work_days}</b>', bold_style)] + \
                           [''] * (len(data.columns) - 3)  # 残りの列を空白で埋める
         table_data.append(required_days_row)
-        
-        # セル結合用のスタイルを追加
-        table_style.add('SPAN', (0, -1), (1, -1))  # 最後の行の最初の2列を結合
 
     available_width = custom_page_size[0] - 10*mm
     date_width = 45*mm
