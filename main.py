@@ -30,17 +30,19 @@ def get_cached_shifts(year, month):
     return db.get_shifts(start_date, end_date)
 
 def initialize_shift_data(year, month):
-    if 'shift_data' not in st.session_state or st.session_state.current_year != year or st.session_state.current_month != month:
-        start_date = pd.Timestamp(year, month, 16)
-        end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
-        date_range = pd.date_range(start=start_date, end=end_date)
-        
-        # アクティブな従業員リストを取得
-        employees = get_active_employees()
-        
-        # シフトデータを取得
-        shifts = get_cached_shifts(year, month)
-        
+    start_date = pd.Timestamp(year, month, 16)
+    end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
+    date_range = pd.date_range(start=start_date, end=end_date)
+    
+    # アクティブな従業員リストを取得
+    employees = get_active_employees()
+    
+    # シフトデータを取得
+    shifts = get_cached_shifts(year, month)
+    
+    if ('shift_data' not in st.session_state or 
+        st.session_state.current_year != year or 
+        st.session_state.current_month != month):
         # 新しいDataFrameを作成
         st.session_state.shift_data = pd.DataFrame(
             index=date_range,
@@ -54,18 +56,25 @@ def initialize_shift_data(year, month):
                 if emp in shifts.columns:
                     st.session_state.shift_data[emp].update(shifts[emp])
         
-        # カスタム祝日を取得
-        custom_holidays = db.get_custom_holidays(year, month)
-        
-        # 土日、祝日、カスタム祝日に'休み'を設定
-        for date in date_range:
-            if (date.weekday() >= 5 or  # 5=土曜日, 6=日曜日
-                jpholiday.is_holiday(date) or  # 通常の祝日
-                date in custom_holidays):  # カスタム祝日
-                st.session_state.shift_data.loc[date, :] = '休み'
-        
         st.session_state.current_year = year
         st.session_state.current_month = month
+    else:
+        # 既存のDataFrameに新しい従業員のカラムを追加
+        current_employees = st.session_state.shift_data.columns
+        new_employees = [emp for emp in employees if emp not in current_employees]
+        
+        for emp in new_employees:
+            st.session_state.shift_data[emp] = ''
+    
+    # カスタム祝日を取得
+    custom_holidays = db.get_custom_holidays(year, month)
+    
+    # 土日、祝日、カスタム祝日に'休み'を設定
+    for date in date_range:
+        if (date.weekday() >= 5 or  # 5=土曜日, 6=日曜日
+            jpholiday.is_holiday(date) or  # 通常の祝日
+            date in custom_holidays):  # カスタム祝日
+            st.session_state.shift_data.loc[date, :] = '休み'
 
 def calculate_shift_count(shift_data):
     def count_shift(shift):
