@@ -221,7 +221,7 @@ def generate_help_table_pdf(data, year, month, custom_holidays=None):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
         ('TEXTCOLOR', (0, 1), (-1, -2), colors.HexColor("#373737")),
         ('BACKGROUND', (0, -3), (-1, -3), colors.HexColor("#e6f3ff")),  # シフト日数行の背景色
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#e6f3ff"))  # 必要日数行の背景色
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#FF7C80"))  # 必要日数行の背景色
     ]
 
     # 必要日数が存在する場合、セル結合のコマンドを追加
